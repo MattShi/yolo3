@@ -5,7 +5,7 @@ import sys
 
 sets=[('2012', 'train'), ('2012', 'val')]
 
-classes = ["bus", "car", "motorbike", "person"]
+classes = ["bus", "car", "person"]
 
 
 def convert(size, box):
@@ -45,11 +45,12 @@ def convert_annotation(rootpath,year, image_id):
 
 
 def main():
-    if len(sys.argv) < 2:
-        print("please input the root of voc dataset")
+    if len(sys.argv) < 3:
+        print("please input the root of voc dataset nad output folder")
         return
 
     voc_root_path = sys.argv[1]
+    output_path = sys.argv[2]
 
     wd = getcwd()
     for year, image_set in sets:
@@ -62,8 +63,8 @@ def main():
             convert_annotation(voc_root_path,year, image_id)
         list_file.close()
 
-    os.system("cat 2012_train.txt 2012_val.txt > train.txt")
-    os.system("cat 2012_train.txt 2012_val.txt > train.all.txt")
+    os.system("cat 2012_train.txt  > %s/train.txt" %(output_path))
+    os.system("cat 2012_val.txt  > %s/val.txt" %(output_path))
 
 
 if __name__== "__main__":

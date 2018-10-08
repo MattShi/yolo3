@@ -1,0 +1,6 @@
+classes= 3
+train  = /home/YOLO3/darknet/darknet/prjs/rgb_multi_class/train.txt
+valid  = /home/YOLO3/darknet/darknet/prjs/rgb_multi_class/val.txt
+names = /home/YOLO3/darknet/darknet/prjs/rgb_multi_class/voc.names
+backup = /home/YOLO3/darknet/darknet/prjs/rgb_multi_class/backup
+
