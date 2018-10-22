@@ -3,6 +3,7 @@ WITH IN THIS BRANCH, WILL USE YOLO3 AND DARKNET  FOR MULTI-CLASS DETECTION.
 
 THANKS FOR THE FOLLOWING PAGES.
 1) FOR DEPLOYING AND CONFIGURATION ,CLICK THIS(https://zhuanlan.zhihu.com/p/35490655)
+2) OPENMP sudo apt install libomp-dev
 
 
 ![Darknet Logo](http://pjreddie.com/media/files/darknet-black-small.png)
