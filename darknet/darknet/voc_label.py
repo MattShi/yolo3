@@ -59,14 +59,26 @@ def trans_dlib_2_yolo3(treenode,outfile,infoler,outfolder,clsname):
     root = treenode.getroot()
     for img in root.iter('image'):
         imgid = img.get('file')
-        imgfilename = os.path.basename(imgid)
+        imgfilebasename = os.path.basename(imgid)
+        imgfilename, imgextension = os.path.splitext(imgfilebasename)
+
+
+        #tidy filename
+        imgfilename = imgfilename.replace("jpg",'_')
+        imgfilename = imgfilename.replace("JPG", '_')
+        imgfilename = imgfilename.replace("jpeg", '_')
+        imgfilename = imgfilename.replace("JPEG", '_')
+        imgfilename = imgfilename.replace("png", '_')
+        imgfilename = imgfilename.replace("PNG", '_')
+
+        imgfilenewname = imgfilename + imgextension
 
         cpfile_from = ("%s/%s" % (infoler,imgid))
-        cpfile_to = ("%s/JPEGImages/%s" % (outfolder,imgfilename))
+        cpfile_to = ("%s/JPEGImages/%s" % (outfolder,imgfilenewname))
         copyfile(cpfile_from,cpfile_to)
 
         out_labelfile = open('%s/labels/%s.txt' % (outfolder,imgfilename), 'w')
-        out_datasefile.write('%s/%s\n' %(infoler,imgid))
+        out_datasefile.write('%s\n' %(cpfile_to))
 
         for imgbox in img.iter('box'):
 
@@ -84,8 +96,8 @@ def trans_dlib_2_yolo3(treenode,outfile,infoler,outfolder,clsname):
 def process_dlib_2_yolo3(infoler,outfolder):
     tree_train = ET.parse(infoler+"/training.xml")
     tree_test = ET.parse(infoler + "/testing.xml")
-    trans_dlib_2_yolo3(tree_train,outfolder+"/yolov3_train.txt",infoler,outfolder,"face")
-    trans_dlib_2_yolo3(tree_test,outfolder+"/yolov3_test.txt",infoler,outfolder,"face")
+    trans_dlib_2_yolo3(tree_train,outfolder+"/train.txt",infoler,outfolder,"face")
+    trans_dlib_2_yolo3(tree_test,outfolder+"/test.txt",infoler,outfolder,"face")
 
 
 if __name__ == '__main__':
