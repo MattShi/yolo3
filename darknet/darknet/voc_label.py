@@ -1,15 +1,19 @@
 import xml.etree.ElementTree as ET
-import pickle
+import sys
 import os
+from PIL import Image
+from shutil import copyfile
 from os import listdir, getcwd
 from os.path import join
 
-sets=[('2012', 'train'), ('2012', 'val'), ('2007', 'train'), ('2007', 'val'), ('2007', 'test')]
+sets=[('2012', 'train'), ('2012', 'val')]
 
-classes = ["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow", "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
+classes_name = ["face"]
 
 
 def convert(size, box):
+    if len(size) != 4 or len(box) != 2:
+        return
     dw = 1./size[0]
     dh = 1./size[1]
     x = (box[0] + box[1])/2.0
@@ -22,35 +26,78 @@ def convert(size, box):
     h = h*dh
     return (x,y,w,h)
 
-def convert_annotation(year, image_id):
-    in_file = open('VOCdevkit/VOC%s/Annotations/%s.xml'%(year, image_id))
-    out_file = open('VOCdevkit/VOC%s/labels/%s.txt'%(year, image_id), 'w')
-    tree=ET.parse(in_file)
-    root = tree.getroot()
-    size = root.find('size')
-    w = int(size.find('width').text)
-    h = int(size.find('height').text)
 
-    for obj in root.iter('object'):
-        difficult = obj.find('difficult').text
-        cls = obj.find('name').text
-        if cls not in classes or int(difficult) == 1:
-            continue
-        cls_id = classes.index(cls)
-        xmlbox = obj.find('bndbox')
-        b = (float(xmlbox.find('xmin').text), float(xmlbox.find('xmax').text), float(xmlbox.find('ymin').text), float(xmlbox.find('ymax').text))
-        bb = convert((w,h), b)
-        out_file.write(str(cls_id) + " " + " ".join([str(a) for a in bb]) + '\n')
+def convertdlib2yolo3(size, box):
+    if len(size) != 2 or len(box) != 4:
+        return
 
-wd = getcwd()
+    dw = 1./size[0]
+    dh = 1./size[1]
+    x = (box[0] + box[2]/2.0)
+    y = (box[1] + box[3]/2.0)
 
-for year, image_set in sets:
-    if not os.path.exists('VOCdevkit/VOC%s/labels/'%(year)):
-        os.makedirs('VOCdevkit/VOC%s/labels/'%(year))
-    image_ids = open('VOCdevkit/VOC%s/ImageSets/Main/%s.txt'%(year, image_set)).read().strip().split()
-    list_file = open('%s_%s.txt'%(year, image_set), 'w')
-    for image_id in image_ids:
-        list_file.write('%s/VOCdevkit/VOC%s/JPEGImages/%s.jpg\n'%(wd, year, image_id))
-        convert_annotation(year, image_id)
-    list_file.close()
+    x = x*dw
+    w = box[2]*dw
+    y = y*dh
+    h = box[3]*dh
+    return (x,y,w,h)
 
+
+def trans_dlib_2_yolo3(treenode,outfile,infoler,outfolder,clsname):
+    clsid = classes_name.index(clsname)
+    if clsid < 0:
+        return
+
+    out_datasefile = open(outfile, 'w')
+
+    if not os.path.exists("%s/labels" %(outfolder)):
+        os.mkdir("%s/labels" %(outfolder))
+
+    if not os.path.exists("%s/JPEGImages" % (outfolder)):
+            os.mkdir("%s/JPEGImages" % (outfolder))
+
+    root = treenode.getroot()
+    for img in root.iter('image'):
+        imgid = img.get('file')
+        imgfilename = os.path.basename(imgid)
+
+        cpfile_from = ("%s/%s" % (infoler,imgid))
+        cpfile_to = ("%s/JPEGImages/%s" % (outfolder,imgfilename))
+        copyfile(cpfile_from,cpfile_to)
+
+        out_labelfile = open('%s/labels/%s.txt' % (outfolder,imgfilename), 'w')
+        out_datasefile.write('%s/%s\n' %(infoler,imgid))
+
+        for imgbox in img.iter('box'):
+
+            if imgbox.get('ignore') == '1':
+                continue
+
+            box = (float(imgbox.get('left')), float(imgbox.get('top')),
+                    float(imgbox.get('width')), float(imgbox.get('height')))
+
+            img = Image.open('%s/%s' %(infoler,imgid))
+            box_cvt = convertdlib2yolo3(img.size,box)
+            out_labelfile.write(str(clsid) + " " + " ".join([str(a) for a in box_cvt]) + '\n')
+
+
+def process_dlib_2_yolo3(infoler,outfolder):
+    tree_train = ET.parse(infoler+"/training.xml")
+    tree_test = ET.parse(infoler + "/testing.xml")
+    trans_dlib_2_yolo3(tree_train,outfolder+"/yolov3_train.txt",infoler,outfolder,"face")
+    trans_dlib_2_yolo3(tree_test,outfolder+"/yolov3_test.txt",infoler,outfolder,"face")
+
+
+if __name__ == '__main__':
+    if len(sys.argv) < 3:
+        print('Usage: dataset_formatt[dlib2yolo3] dataset_folder output_folder')
+        exit(1)
+
+    g_format = sys.argv[1]
+    g_input = sys.argv[2]
+    g_output = sys.argv[3]
+
+    if g_format == "dlib2yolo3":
+        process_dlib_2_yolo3(g_input,g_output)
+    else:
+        print('wrong format[dlib2yolo3]')
