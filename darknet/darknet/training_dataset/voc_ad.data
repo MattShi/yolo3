@@ -1,0 +1,6 @@
+classes= 1
+train  = /home/matt/work/YOLO3/yolo3/darknet/darknet/training_dataset/train.txt
+valid  = /home/matt/work/YOLO3/yolo3/darknet/darknet/training_dataset/test.txt
+names = /home/matt/work/YOLO3/yolo3/darknet/darknet/training_dataset/voc_ad.names
+backup = /home/matt/work/YOLO3/yolo3/darknet/darknet/training_dataset/backup
+
