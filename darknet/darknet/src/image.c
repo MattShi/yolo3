@@ -246,13 +246,13 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
         for(j = 0; j < classes; ++j){
             if (dets[i].prob[j] > thresh){
                 if (class < 0) {
-                    strcat(labelstr, names[j]);
+                    strcat(labelstr, names == NULL ?"null": names[j]);
                     class = j;
                 } else {
                     strcat(labelstr, ", ");
-                    strcat(labelstr, names[j]);
+                    strcat(labelstr, names == NULL ?"null": names[j]);
                 }
-                printf("%s: %.0f%%\n", names[j], dets[i].prob[j]*100);
+                printf("box index=%d  class index =%d ,name=%s: %.0f%%\n", i,j ,names == NULL ?"null": names[j], dets[i].prob[j]*100);
             }
         }
         if(class >= 0){
