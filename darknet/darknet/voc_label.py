@@ -1,15 +1,17 @@
 import xml.etree.ElementTree as ET
 import sys
 import os
+import random
+
 from PIL import Image
 from shutil import copyfile
-from os import listdir, getcwd
-from os.path import join
 
+
+N_DROP_PER = 3;
 
 sets=[('2012', 'train'), ('2012', 'val')]
 
-classes_name = ["face","bicycle","bus", "car",  "motorbike", "person"]
+classes_name = ["face","bicycle","bus", "car",  "motorbike"]
 
 
 def convert(size, box):
@@ -43,6 +45,7 @@ def convertdlib2yolo3(size, box):
 
 
 def trans_dlib_2_yolo3(treenode,outfile,infoler,outfolder,clsname):
+
     clsid = classes_name.index(clsname)
     if clsid < 0:
         return
@@ -74,7 +77,8 @@ def trans_dlib_2_yolo3(treenode,outfile,infoler,outfolder,clsname):
         copyfile(cpfile_from,cpfile_to)
 
         out_labelfile = open('%s/labels/%s.txt' % (outfolder,imgfilename), 'w')
-        out_datasefile.write('%s\n' %(cpfile_to))
+
+        valid_count = 0
 
         for imgbox in img.iter('box'):
 
@@ -83,10 +87,14 @@ def trans_dlib_2_yolo3(treenode,outfile,infoler,outfolder,clsname):
 
             box = (float(imgbox.get('left')), float(imgbox.get('top')),
                     float(imgbox.get('width')), float(imgbox.get('height')))
+            valid_count += 1
 
             img = Image.open('%s/%s' %(infoler,imgid))
             box_cvt = convertdlib2yolo3(img.size,box)
             out_labelfile.write(str(clsid) + " " + " ".join([str(a) for a in box_cvt]) + '\n')
+
+        if valid_count > 0 or random.randint(1,N_DROP_PER)%N_DROP_PER == 0:
+            out_datasefile.write('%s\n' % (cpfile_to))
 
 
 def process_dlib_2_yolo3(infoler,outfolder):
@@ -96,9 +104,8 @@ def process_dlib_2_yolo3(infoler,outfolder):
     trans_dlib_2_yolo3(tree_test,outfolder+"/test.txt",infoler,outfolder,"face")
 
 
-
-
 def convert_annotation_voc_yolo3(infoler,outfolder,year, image_id):
+    valid_count = 0
     in_file = open('%s/VOC%s/Annotations/%s.xml'%(infoler,year, image_id))
     out_file = open('%s/VOC%s/labels/%s.txt'%(infoler,year, image_id), 'w')
     tree = ET.parse(in_file)
@@ -112,11 +119,14 @@ def convert_annotation_voc_yolo3(infoler,outfolder,year, image_id):
         cls = obj.find('name').text
         if cls not in classes_name or int(difficult) == 1:
             continue
+        valid_count += 1
         cls_id = classes_name.index(cls)
         xmlbox = obj.find('bndbox')
         b = (float(xmlbox.find('xmin').text), float(xmlbox.find('xmax').text), float(xmlbox.find('ymin').text), float(xmlbox.find('ymax').text))
         bb = convert((w,h), b)
         out_file.write(str(cls_id) + " " + " ".join([str(a) for a in bb]) + '\n')
+
+    return valid_count
 
 
 def trans_voc_2_yolo3(infoler,outfolder):
@@ -126,9 +136,10 @@ def trans_voc_2_yolo3(infoler,outfolder):
         image_ids = open('%s/VOC%s/ImageSets/Main/%s.txt' % (infoler,year, image_set)).read().strip().split()
         list_file = open('%s/%s_%s.txt' % (outfolder,year, image_set), 'w')
         for image_id in image_ids:
-            list_file.write('%s/VOC%s/JPEGImages/%s.jpg\n' % (infoler, year, image_id))
-            convert_annotation_voc_yolo3(infoler,outfolder,year, image_id)
+            if convert_annotation_voc_yolo3(infoler,outfolder,year, image_id) > 0 or random.randint(1,N_DROP_PER)%N_DROP_PER == 0:
+                list_file.write('%s/VOC%s/JPEGImages/%s.jpg\n' % (infoler, year, image_id))
         list_file.close()
+
 
 def process_voc_2_yolo3(infoler,outfolder):
     trans_voc_2_yolo3(infoler,outfolder)
@@ -148,4 +159,5 @@ if __name__ == '__main__':
         process_dlib_2_yolo3(g_input,g_output)
     if g_format == "voc2yolo3":
         process_voc_2_yolo3(g_input, g_output)
+    else:
         print('wrong format[dlib2yolo3]')
